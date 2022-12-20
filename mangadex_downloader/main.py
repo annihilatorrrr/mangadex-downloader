@@ -83,7 +83,7 @@ def download(
 
     # Cover path
     cover_path = base_path / 'cover.jpg'
-    log.info('Downloading cover manga %s' % manga.title)
+    log.info(f'Downloading cover manga {manga.title}')
 
     # Determine cover art quality
     if cover == "original":
@@ -123,7 +123,7 @@ def download(
             "_range": _range,
         }
 
-        log.info("Using %s format" % save_as)
+        log.info(f"Using {save_as} format")
 
         fmt = fmt_class(
             path,
@@ -160,11 +160,11 @@ def download(
             download_manga(new_manga, new_path)
 
             log.info(f"Download finished for manga {manga.title} in {translated_lang.name} language")
-        
+
     else:
         log.info(f'Download directory is set to "{base_path.resolve()}"')
         download_manga(manga, base_path)
-                
+
     log.info("Download finished for manga \"%s\"" % manga.title)
     return manga
 
@@ -231,8 +231,7 @@ def download_legacy_manga(legacy_id, *args, **kwargs):
     The rest of parameters will be passed to :meth:`download`.
     """
     new_id = get_legacy_id('manga', legacy_id)
-    manga = download(new_id, *args, **kwargs)
-    return manga
+    return download(new_id, *args, **kwargs)
 
 def download_legacy_chapter(legacy_id, *args, **kwargs):
     """Download chapter from old MangaDex url
@@ -240,5 +239,4 @@ def download_legacy_chapter(legacy_id, *args, **kwargs):
     The rest of parameters will be passed to :meth:`download_chapter`
     """
     new_id = get_legacy_id('chapter', legacy_id)
-    manga = download_chapter(new_id, *args, **kwargs)
-    return manga
+    return download_chapter(new_id, *args, **kwargs)

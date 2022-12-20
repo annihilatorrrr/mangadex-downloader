@@ -36,7 +36,7 @@ _cleanup_jobs = []
 class FileDownloader:
     def __init__(self, url, file, progress_bar=True, replace=False, use_requests=False, **headers) -> None:
         self.url = url
-        self.file = str(file) + '.temp'
+        self.file = f'{str(file)}.temp'
         self.real_file = file
         self.progress_bar = progress_bar
         self.replace = replace
@@ -45,16 +45,12 @@ class FileDownloader:
 
         # If somehow this is used to sending HTTP requests from another websites (not mangadex)
         # then use requests.Session instead
-        if use_requests:
-            self.session = Net.requests
-        else:
-            self.session = Net.mangadex
-
+        self.session = Net.requests if use_requests else Net.mangadex
         if headers.get('Range') is not None and self._get_file_size(self.file):
             raise ValueError('"Range" header is not supported while in resume state')
 
         self._tqdm = None
-        
+
         self._register_keyboardinterrupt_handler()
 
         # If file exist, delete it
@@ -79,9 +75,8 @@ class FileDownloader:
                 kwargs.setdefault('ncols', 80)
             elif length > 20 and length < 50:
                 kwargs.setdefault('dynamic_ncols', True)
-            # Length desc is more than 40 or 50
             elif length >= 50:
-                desc = desc[:20] + '...'
+                desc = f'{desc[:20]}...'
                 kwargs.setdefault('ncols', 90)
 
             kwargs.setdefault('desc', desc)
@@ -93,16 +88,13 @@ class FileDownloader:
             self._tqdm.update(n)
 
     def _get_file_size(self, file):
-        if os.path.exists(file):
-            return os.path.getsize(file)
-        else:
-            return None
+        return os.path.getsize(file) if os.path.exists(file) else None
 
     def _parse_headers(self, initial_sizes):
         headers = self.headers_request or {}
 
         if initial_sizes:
-            headers['Range'] = 'bytes=%s-' % initial_sizes
+            headers['Range'] = f'bytes={initial_sizes}-'
         return headers
 
     def on_prepare(self):
@@ -146,7 +138,7 @@ class FileDownloader:
             except Exception as e:
                 # Other Exception
                 error = e
-            
+
             # The downloader are requesting out of range bytes file
             # Because previous download are cancelled or error and .temp file are exists
             # and fully downloaded
@@ -157,9 +149,11 @@ class FileDownloader:
                 return True
 
             # Request failed
-            if error is not None or (
-                resp is not None and
-                resp.status_code > 200 and not resp.status_code < 400
+            if (
+                error is not None
+                or resp is not None
+                and resp.status_code > 200
+                and resp.status_code >= 400
             ):
                 self.on_error(error, resp)
                 return False
@@ -178,7 +172,7 @@ class FileDownloader:
                     f"Server didn't support resume download, deleting '{os.path.basename(self.file)}'"
                 )
                 delete_file(self.file)
-                
+
                 initial_file_sizes = None
 
             # If "Range" header request is present
@@ -186,9 +180,7 @@ class FileDownloader:
             if initial_file_sizes:
                 file_sizes += initial_file_sizes
 
-            # Check if file is exist or not
-            real_file_sizes = self._get_file_size(self.real_file)
-            if real_file_sizes:
+            if real_file_sizes := self._get_file_size(self.real_file):
                 if file_sizes == real_file_sizes and not self.replace:
                     log.info('File exist and replace is False, cancelling download...')
                     self.on_finish()
@@ -234,15 +226,14 @@ class FileDownloader:
         if os.path.exists(self.real_file):
             delete_file(self.real_file)
 
-        w_fp = open(self.real_file, 'wb')
-        r_fp =  open(self.file, 'rb')
-        while True:
-            data = r_fp.read(self.chunk_size)
-            if not data:
-                break
-            w_fp.write(data)
+        with open(self.real_file, 'wb') as w_fp:
+            r_fp =  open(self.file, 'rb')
+            while True:
+                if data := r_fp.read(self.chunk_size):
+                    w_fp.write(data)
 
-        w_fp.close()
+                else:
+                    break
         r_fp.close()
 
         delete_file(self.file)

@@ -162,12 +162,12 @@ class PDFPlugin:
                     # It is a single frame image
                     pass
             number_of_pages += im_number_of_pages
-            for i in range(im_number_of_pages):
+            for _ in range(im_number_of_pages):
                 image_refs.append(existing_pdf.next_object_id(0))
                 page_refs.append(existing_pdf.next_object_id(0))
                 contents_refs.append(existing_pdf.next_object_id(0))
                 existing_pdf.pages.append(page_refs[-1])
-            
+
             # Reduce Opened files
             if isinstance(im_ref, _PageRef):
                 img.close()
@@ -335,7 +335,7 @@ class PDFPlugin:
 
                 self.tqdm.update(1)
                 page_number += 1
-            
+
             # Close image to save memory
             im_sequence.close()
 
@@ -400,7 +400,7 @@ class PDF(BaseFormat):
             chap_name = chap_class.get_simplified_name()
             count = NumberWithLeadingZeros(0)
 
-            pdf_file = self.path / (chap_name + '.pdf')
+            pdf_file = self.path / f'{chap_name}.pdf'
             if pdf_file.exists():
 
                 if self.replace:
@@ -437,9 +437,9 @@ class PDFSingle(PDF):
             # there is nothing we can download
             worker.shutdown()
             return
-        
+
         cache, _, merged_name = result_cache
-        pdf_file = self.path / (merged_name + '.pdf')
+        pdf_file = self.path / f'{merged_name}.pdf'
 
         if pdf_file.exists():
             if self.replace:
@@ -452,7 +452,7 @@ class PDFSingle(PDF):
 
         for chap_class, chap_images in cache:
             # Insert "start of the chapter" image
-            img_name = count.get() + '.png'
+            img_name = f'{count.get()}.png'
             img_path = path / img_name
 
             if not self.no_chapter_info:
@@ -500,12 +500,8 @@ class PDFVolume(PDF):
             count = NumberWithLeadingZeros(0)
 
             # Build volume folder name
-            if volume is not None:
-                vol_name = f'Vol. {volume}'
-            else:
-                vol_name = 'No Volume'
-
-            pdf_name = vol_name + '.pdf'
+            vol_name = f'Vol. {volume}' if volume is not None else 'No Volume'
+            pdf_name = f'{vol_name}.pdf'
             pdf_file = self.path / pdf_name
 
             if pdf_file.exists():
@@ -521,7 +517,7 @@ class PDFVolume(PDF):
             for chap_class, chap_images in chapters:
 
                 # Insert "start of the chapter" image
-                img_name = count.get() + '.png'
+                img_name = f'{count.get()}.png'
                 img_path = volume_path / img_name
 
                 if not self.no_chapter_info:

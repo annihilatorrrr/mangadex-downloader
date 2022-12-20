@@ -379,7 +379,7 @@ class Epub(BaseFormat):
             chap_name = chap_class.get_simplified_name()
 
             # Check if .epub file is exist or not
-            chapter_epub_path = self.path / (chap_name + '.epub')
+            chapter_epub_path = self.path / f'{chap_name}.epub'
             if chapter_epub_path.exists():
 
                 if self.replace:
@@ -452,11 +452,11 @@ class EpubVolume(Epub):
             else:
                 volume = 'No Volume'
 
-            volume_epub_path = self.path / (volume + '.epub')
+            volume_epub_path = self.path / f'{volume}.epub'
 
             # Check if exist or not
             if volume_epub_path.exists():
-                
+
                 if self.replace:
                     delete_file(volume_epub_path)
                 else:
@@ -481,7 +481,7 @@ class EpubVolume(Epub):
                 volume_epub_path
             )
             worker.submit(job)
-                
+
             # Remove original chapter folder
             shutil.rmtree(volume_path, ignore_errors=True)
 
@@ -500,11 +500,11 @@ class EpubSingle(Epub):
             # there is nothing we can download
             worker.shutdown()
             return
-        
+
         cache, total, merged_name = result_cache
 
         count = NumberWithLeadingZeros(total)
-        manga_epub_path = self.path / (merged_name + '.epub')
+        manga_epub_path = self.path / f'{merged_name}.epub'
 
         # Check if exist or not
         if manga_epub_path.exists():

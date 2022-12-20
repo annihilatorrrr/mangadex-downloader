@@ -45,14 +45,16 @@ log = logging.getLogger(__name__)
 def _build_re(_type):
     # Legacy support
     if 'legacy-manga' in _type:
-        regex = r'mangadex\.org\/(title|manga)\/(?P<id>[0-9]{1,})'
+        return r'mangadex\.org\/(title|manga)\/(?P<id>[0-9]{1,})'
     elif 'legacy-chapter' in _type:
-        regex = r'mangadex\.org\/chapter\/(?P<id>[0-9]{1,})'
+        return r'mangadex\.org\/chapter\/(?P<id>[0-9]{1,})'
     elif _type == 'manga':
-        regex = r'mangadex\.org\/(title|manga)\/(?P<id>[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})'
+        return r'mangadex\.org\/(title|manga)\/(?P<id>[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})'
     else:
-        regex = r"mangadex\.org\/%s\/(?P<id>[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})" % _type
-    return regex
+        return (
+            r"mangadex\.org\/%s\/(?P<id>[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})"
+            % _type
+        )
 
 def download_manga(url, args, legacy=False):
     check_group_all(args)
@@ -60,13 +62,19 @@ def download_manga(url, args, legacy=False):
     if args.group and args.no_group_name:
         raise MangaDexException("--group cannot be used together with --no-group-name")
 
-    if args.start_chapter is not None and args.end_chapter is not None:
-        if args.start_chapter > args.end_chapter:
-            raise MangaDexException("--start-chapter cannot be more than --end-chapter")
+    if (
+        args.start_chapter is not None
+        and args.end_chapter is not None
+        and args.start_chapter > args.end_chapter
+    ):
+        raise MangaDexException("--start-chapter cannot be more than --end-chapter")
 
-    if args.start_page is not None and args.end_page is not None:
-        if args.start_page > args.end_page:
-            raise MangaDexException("--start-page cannot be more than --end-page")
+    if (
+        args.start_page is not None
+        and args.end_page is not None
+        and args.start_page > args.end_page
+    ):
+        raise MangaDexException("--start-page cannot be more than --end-page")
 
     # We cannot allow if --range and other range options (such as: --start-chapter) together
     range_forbidden_args = {
@@ -118,7 +126,7 @@ def download_chapter(url, args, legacy=False):
         dl_chapter(*args)
 
 def _error_list(option):
-    raise MangaDexException("%s is not allowed when download a list" % option)
+    raise MangaDexException(f"{option} is not allowed when download a list")
 
 def download_list(url, args):
     if args.start_chapter:
@@ -155,7 +163,7 @@ valid_types = [
     "legacy-chapter"
 ]
 
-funcs = {i: globals()['download_%s' % i.replace('-', '_')] for i in valid_types}
+funcs = {i: globals()[f"download_{i.replace('-', '_')}"] for i in valid_types}
 
 regexs = {i: _build_re(i) for i in valid_types}
 
@@ -170,10 +178,7 @@ class URL:
         self.func(self.id, args)
 
     def __repr__(self) -> str:
-        return '<URL func = "%s" id = "%s">' % (
-            self.func.__name__,
-            self.id
-        )
+        return f'<URL func = "{self.func.__name__}" id = "{self.id}">'
 
 def build_URL_from_type(_type, _id):
     return URL(funcs[_type], _id)
@@ -191,16 +196,16 @@ def smart_select_url(url):
             continue
 
         # Get UUID
-        _id = match.group('id')
+        _id = match['id']
 
         # Get download function
         func = funcs[_type]
 
         found = True
-        
+
         if found:
             break
-    
+
     # If none of patterns is match, grab UUID instantly and then
     # fetch one by one, starting from manga, list, and then chapter.
     if not found:
@@ -213,7 +218,7 @@ def smart_select_url(url):
             pass
         else:
             func = funcs['manga']
-        
+
         # MDlist
         try:
             get_list(_id)
@@ -234,7 +239,7 @@ def smart_select_url(url):
         # raise error
         if func is None:
             raise InvalidURL(f"'{url}' is not valid MangaDex URL")
-    
+
     return URL(func, _id)
 
 def _try_read(path):
@@ -254,12 +259,12 @@ def build_url(parser, args):
 
             exec_command = True
             break
-    
+
     if not exec_command:
         # Parsing file path
         if args.file:
             _, file = get_key_value(args.URL, sep=':')
-            
+
             if not file:
                 parser.error("Syntax error: file path argument is empty")
 
@@ -272,7 +277,7 @@ def build_url(parser, args):
                     raise MangaDexException(f"Failed to connect '{file}', status code = {r.status_code}")
 
                 urls = r.text
-            
+
             # Because this is specified syntax for batch downloading
             # If file doesn't exist, raise error
             else:
@@ -282,11 +287,7 @@ def build_url(parser, args):
         else:
             file_content = _try_read(args.URL)
 
-            if file_content is not None:
-                urls = file_content
-            else:
-                urls = args.URL
-
+            urls = file_content if file_content is not None else args.URL
         result = urls.splitlines(keepends=False)
 
     def yeet():
@@ -295,7 +296,7 @@ def build_url(parser, args):
             func = lambda i: build_URL_from_type(args.type, i)
         else:
             func = smart_select_url
-        
+
         for i in result:
             try:
                 yield func(i)

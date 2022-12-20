@@ -223,11 +223,9 @@ class _Checker:
     def _get_keyword(self, chap):
         keyword = ""
         if chap.oneshot:
-            keyword = "oneshot"
+            return "oneshot"
         else:
-            keyword = chap.chapter.lower() if chap.chapter is not None else ""
-        
-        return keyword
+            return chap.chapter.lower() if chap.chapter is not None else ""
 
     def check(self, num):
         raise NotImplementedError
@@ -239,10 +237,7 @@ class _Checker:
         except KeyError:
             ignored = False
 
-        if ignored:
-            return False
-
-        return self.check(num)
+        return False if ignored else self.check(num)
 
     def check_chapter(self, chap):
         ignored = self._get_keyword(chap) in self.ignored_chapters
@@ -305,7 +300,7 @@ class _RangeStarttoEnd(_Checker):
         if num is None:
             # We can't do anything if num is "null"
             return True
-        
+
         try:
             num = float(num)
         except ValueError:
@@ -313,13 +308,7 @@ class _RangeStarttoEnd(_Checker):
             # Just return True
             return True
 
-        if not (num >= self.start):
-            return False
-        
-        if not (num <= self.end):
-            return False
-        
-        return True
+        return False if num < self.start else num <= self.end
 
 class _Check(_Checker):
     def __init__(self, ptrn):
@@ -328,11 +317,7 @@ class _Check(_Checker):
     def check(self, num):
         return num.lower() == self.ptrn
 
-re_numbers = r''
-
-# Start to end
-re_numbers += r'(?P<starttoend>.{1,}-.{1,})|'
-
+re_numbers = r'' + r'(?P<starttoend>.{1,}-.{1,})|'
 # End from
 re_numbers += r'(?P<endfrom>.{0,}-.{1,})|'
 

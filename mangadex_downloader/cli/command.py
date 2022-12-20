@@ -135,14 +135,12 @@ class BaseCommand:
                 result = choices[pos]
             except KeyError:
                 result = None
-            
+
             if result is not None:
                 yield result
                 break
             elif pos == "*":
-                for item in choices.values():
-                    yield item
-
+                yield from choices.values()
             try:
                 self._insert_choices(choices)
             except IteratorEmpty:
@@ -191,15 +189,15 @@ class BaseCommand:
                         answer = None
                     else:
                         return item
-                
-                if answer is not None:
-                    try:
-                        self._insert_choices(choices, action)
-                    except IteratorEmpty:
-                        self._error("There are no more results")
-                    except IndexError:
-                        self._error("Choices are out of range, try again")
-        
+
+            if answer is not None:
+                try:
+                    self._insert_choices(choices, action)
+                except IteratorEmpty:
+                    self._error("There are no more results")
+                except IndexError:
+                    self._error("Choices are out of range, try again")
+
             self._print_choices()
             answer = input_handle("=> ")
 
@@ -279,12 +277,8 @@ class ListLibraryCommand(MDListCommand):
                 user_id = validate_url(user)
             except InvalidURL as e:
                 parser.error(f'"{user}" is not a valid user')
-        
-        if user:
-            iterator = IteratorUserList(user_id)
-        else:
-            iterator = IteratorUserLibraryList()
-        
+
+        iterator = IteratorUserList(user_id) if user else IteratorUserLibraryList()
         try:
             user = iterator.user
         except AttributeError:
@@ -326,8 +320,6 @@ class FollowedListLibraryCommand(MDListCommand):
 class FilterEnabled:
     @classmethod
     def parse_filter(cls, args):
-        # Parse filters
-        orders = {}
         filter_kwargs = {}
         filters = args.filter or []
         for f in filters:
@@ -348,15 +340,10 @@ class FilterEnabled:
 
                 filter_kwargs[key] = new_values
 
-        # We cannot put "order[key]" into function parameters
-        # that would cause syntax error
-        for key in filter_kwargs.keys():
-            if 'order' in key:
-                orders[key] = filter_kwargs[key]
-
+        orders = {key: filter_kwargs[key] for key in filter_kwargs if 'order' in key}
         # Remove "order[key]" from filter_kwargs
         # to avoid syntax error
-        for key in orders.keys():
+        for key in orders:
             filter_kwargs.pop(key)
 
         # This much safer
@@ -416,13 +403,13 @@ class RandomMangaCommand(MangaCommand, FilterEnabled):
         if value:
             raise MangaDexException(
                 "Syntax 'random:<content_rating>' are no longer supported, " \
-                "use --filter or -ft instead."
+                    "use --filter or -ft instead."
             )
 
         filters = self.parse_filter(args)
 
         iterator = iter_random_manga(**filters)
-        text = f'Found random manga'
+        text = 'Found random manga'
         super().__init__(
             parser,
             args,

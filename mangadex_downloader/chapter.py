@@ -75,27 +75,23 @@ class ChapterImages:
         self._low_images = data['chapter']['dataSaver']
 
     def _check_range_page_legacy(self, page, log_info):
-        if self.start_page is not None:
-            if not (page >= self.start_page):
+        if self.start_page is not None and not (page >= self.start_page):
+            if log_info:
+                log.info("Ignoring page %s as \"start_page\" is %s" % (
+                    page,
+                    self.start_page
+                ))
 
-                if log_info:
-                    log.info("Ignoring page %s as \"start_page\" is %s" % (
-                        page,
-                        self.start_page
-                    ))
+            return False
 
-                return False
+        if self.end_page is not None and not (page <= self.end_page):
+            if log_info:
+                log.info("Ignoring page %s as \"end_page\" is %s" % (
+                    page,
+                    self.end_page
+                ))
 
-        if self.end_page is not None:
-            if not (page <= self.end_page):
-
-                if log_info:
-                    log.info("Ignoring page %s as \"end_page\" is %s" % (
-                        page,
-                        self.end_page
-                    ))
-
-                return False
+            return False
 
         return True
 
@@ -165,15 +161,14 @@ class Chapter:
         manga_id = None
         user = None
         for rel in rels:
-            rel_id = rel['id']
             rel_type = rel['type']
-            if rel_type == 'scanlation_group':
+            if rel_type == 'manga':
+                manga_id = rel['id']
+            elif rel_type == 'scanlation_group':
                 groups.append(Group(data=rel))
-            elif rel_type == 'manga':
-                manga_id = rel_id
             elif rel_type == 'user':
                 user = User(data=rel)
-        
+
         if manga_id is None:
             raise RuntimeError(f"chapter {_id} has no manga relationship")
 
@@ -240,11 +235,7 @@ class Chapter:
         name = ""
         simpl_name = ""
 
-        if self.title is None:
-            lower_title = ""
-        else:
-            lower_title = self.title.lower()
-
+        lower_title = "" if self.title is None else self.title.lower()
         if 'oneshot' in lower_title:
             self.oneshot = True
             if self.chapter is not None:
@@ -325,7 +316,7 @@ def iter_chapters_feed(manga_id, lang):
     ]
     offset = 0
     limit = 500
-    
+
     while True:
         params = {
             'includes[]': includes,
@@ -345,9 +336,7 @@ def iter_chapters_feed(manga_id, lang):
         if not items:
             break
 
-        for item in items:
-            yield item
-        
+        yield from items
         offset += len(items)
 
 class IteratorChapter:
@@ -390,20 +379,16 @@ class IteratorChapter:
         self.all_group = False
         self.legacy_range = legacy_range
         self.duplicates = {}
-        
-        if _range is not None:
-            # self.range = range_mod.compile(_range)
-            self.range = None
-        else:
-            self.range = _range
 
-        if groups and groups[0] == "all":
-            self.all_group = True
-        elif groups:
-            self.groups = self._parse_groups(groups)
+        self.range = None if _range is not None else _range
+        if groups:
+            if groups[0] == "all":
+                self.all_group = True
+            else:
+                self.groups = self._parse_groups(groups)
 
         log_cache = kwargs.get('log_cache')
-        self.log_cache = True if log_cache else False
+        self.log_cache = bool(log_cache)
 
         self._fill_data()
 
@@ -638,11 +623,7 @@ class MangaChapter:
         )
 
     def _parse_volumes_from_chapter(self, chapter):
-        if not isinstance(chapter, Chapter):
-            chap = Chapter(chapter)
-        else:
-            chap = chapter
-
+        chap = chapter if isinstance(chapter, Chapter) else Chapter(chapter)
         self.chapters.append(chap)
 
     def _parse_volumes(self):

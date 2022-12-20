@@ -54,10 +54,9 @@ class BaseFormat:
         chap_name = chap_class.get_name()
 
         # Fetching chapter images
-        log.info('Getting %s from chapter %s' % (
-            'compressed images' if self.compress_img else 'images',
-            chap
-        ))
+        log.info(
+            f"Getting {'compressed images' if self.compress_img else 'images'} from chapter {chap}"
+        )
         images.fetch()
 
         while True:
@@ -70,10 +69,7 @@ class BaseFormat:
 
                 img_path = path / img_name
 
-                log.info('Downloading %s page %s' % (
-                    chap_name,
-                    page
-                ))
+                log.info(f'Downloading {chap_name} page {page}')
 
                 # This can be `True`, `False`, or `None`
                 # `True`: Verify success, hash matching
@@ -85,7 +81,7 @@ class BaseFormat:
                     replace = False
                 else:
                     replace = True if self.replace else not verified
-                
+
                 # If file still in intact and same as the server
                 # Continue to download the others
                 if verified and not self.replace:
@@ -110,10 +106,9 @@ class BaseFormat:
                 # Fetch the new one, and start re-downloading
                 if not success:
                     log.error('One of MangaDex network are having problem, re-fetching the images...')
-                    log.info('Getting %s from chapter %s' % (
-                        'compressed images' if self.compress_img else 'images',
-                        chap
-                    ))
+                    log.info(
+                        f"Getting {'compressed images' if self.compress_img else 'images'} from chapter {chap}"
+                    )
                     error = True
                     images.fetch()
                     break
@@ -121,7 +116,7 @@ class BaseFormat:
                     imgs.append(img_path)
                     count.increase()
                     continue
-            
+
             if not error:
                 return imgs
 
@@ -155,8 +150,10 @@ class BaseFormat:
 
         # Construct .cbz filename from first and last chapter
         first_chapter = cache[0][0]
-        last_chapter = cache[len(cache) - 1][0]
-        merged_name = sanitize_filename(first_chapter.simple_name + " - " + last_chapter.simple_name)
+        last_chapter = cache[-1][0]
+        merged_name = sanitize_filename(
+            f"{first_chapter.simple_name} - {last_chapter.simple_name}"
+        )
 
         return cache, total, merged_name
 

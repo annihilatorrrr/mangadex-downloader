@@ -46,21 +46,21 @@ def generate_Comicinfo(manga, chapter):
     if len(manga.authors) > 0:
         author_str = ""
         for author in manga.authors:
-            author_str = author_str + ',' + author
+            author_str = f'{author_str},{author}'
         xml_author = ET.SubElement(xml_root, 'Writer')
         xml_author.text = author_str[1:]
 
     if len(manga.artists) > 0:
         artist_str = ""
         for artist in manga.artists:
-            artist_str = artist_str + ',' + artist
+            artist_str = f'{artist_str},{artist}'
         xml_artist = ET.SubElement(xml_root, 'Penciller')
         xml_artist.text = artist_str[1:]
 
     if len(manga.genres) > 0:
         genre_str = ""
         for genre in manga.genres:
-            genre_str = genre_str + ',' + genre
+            genre_str = f'{genre_str},{genre}'
         xml_genre = ET.SubElement(xml_root, 'Genre')
         xml_genre.text = genre_str[1:]
 
@@ -70,7 +70,7 @@ def generate_Comicinfo(manga, chapter):
     if len(manga.alternative_titles) > 0:
         alt_str = ""
         for alt in manga.alternative_titles:
-            alt_str = alt_str + ',' + alt
+            alt_str = f'{alt_str},{alt}'
         xml_alt = ET.SubElement(xml_root, 'AlternateSeries')
         xml_alt.text = alt_str[1:]
 
@@ -132,7 +132,7 @@ class ComicBookArchive(BaseFormat):
             chap_name = chap_class.get_simplified_name()
 
             # Check if .cbz file is exist or not
-            chapter_zip_path = self.path / (chap_name + '.cbz')
+            chapter_zip_path = self.path / f'{chap_name}.cbz'
             if chapter_zip_path.exists():
 
                 if self.replace:
@@ -210,11 +210,11 @@ class ComicBookArchiveVolume(ComicBookArchive):
             else:
                 volume = 'No Volume'
 
-            volume_zip_path = self.path / (volume + '.cbz')
+            volume_zip_path = self.path / f'{volume}.cbz'
 
             # Check if exist or not
             if volume_zip_path.exists():
-                
+
                 if self.replace:
                     delete_file(volume_zip_path)
                 else:
@@ -227,7 +227,7 @@ class ComicBookArchiveVolume(ComicBookArchive):
             volume_zip = self.make_zip(volume_zip_path)
 
             for chap_class, chap_images in chapters:
-                img_name = count.get() + '.png'
+                img_name = f'{count.get()}.png'
                 img_path = volume_path / img_name
 
                 # Make sure we never duplicated it
@@ -252,7 +252,7 @@ class ComicBookArchiveVolume(ComicBookArchive):
             log.info(f"{volume} has finished download, converting to cbz...")
 
             worker.submit(lambda: self.convert(volume_zip, images))
-                
+
             # Remove original chapter folder
             shutil.rmtree(volume_path, ignore_errors=True)
 
@@ -271,11 +271,11 @@ class ComicBookArchiveSingle(ComicBookArchive):
             # there is nothing we can download
             worker.shutdown()
             return
-        
+
         cache, total, merged_name = result_cache
 
         count = NumberWithLeadingZeros(total)
-        manga_zip_path = self.path / (merged_name + '.cbz')
+        manga_zip_path = self.path / f'{merged_name}.cbz'
 
         # Check if exist or not
         if manga_zip_path.exists():
@@ -289,7 +289,7 @@ class ComicBookArchiveSingle(ComicBookArchive):
         path = create_directory(merged_name, self.path)
 
         for chap_class, chap_images in cache:
-            img_name = count.get() + '.png'
+            img_name = f'{count.get()}.png'
             img_path = path / img_name
 
             # Make sure we never duplicated it

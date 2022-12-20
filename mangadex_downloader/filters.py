@@ -58,12 +58,7 @@ class Filter:
         return params
 
     def _get_tags(self):
-        tags = {}
-
-        for tag in get_all_tags():
-            tags[tag.name.lower()] = tag
-
-        return tags
+        return {tag.name.lower(): tag for tag in get_all_tags()}
 
     def _init_filters(self):
         self.filters.update({
@@ -172,11 +167,8 @@ class Filter:
         if value:
             m = re.match(r'[0-9]{4}', value)
             if not m:
-                raise FilterError(
-                    "year",
-                    f"value must be integer and length must be 4"
-                )
-        
+                raise FilterError("year", "value must be integer and length must be 4")
+
         return value
 
     def _dummy_validator(self, value):
@@ -295,9 +287,8 @@ class Filter:
         new_order = {}
         ascending = ['asc', 'ascending']
         descending = ['desc', 'descending']
-        for key, value in order.items():
-            # Validate order keys
-            re_order_key = r'order\[(' \
+        # Validate order keys
+        re_order_key = r'order\[(' \
                         r'title|' \
                         r'year|' \
                         r'createdAt|' \
@@ -307,6 +298,7 @@ class Filter:
                         r'relevance|' \
                         r'rating|' \
                         r')\]'
+        for key, value in order.items():
             match = re.match(re_order_key, key)
             if match is None:
                 raise FilterError(
@@ -323,5 +315,5 @@ class Filter:
                     key,
                     f"invalid value must be one of {ascending} or {descending}"
                 )
-        
+
         return new_order

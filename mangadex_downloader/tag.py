@@ -19,11 +19,7 @@ class Tag:
 
 @lru_cache(maxsize=4096)
 def get_all_tags() -> List[Tag]:
-    tags = []
     r = Net.mangadex.get(f'{base_url}/manga/tag')
     data = r.json()
 
-    for item in data['data']:
-        tags.append(Tag(item))
-    
-    return tags
+    return [Tag(item) for item in data['data']]

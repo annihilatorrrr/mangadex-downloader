@@ -134,10 +134,10 @@ class Paginator:
         until_pos = until_pos + 1
 
         for _ in range(self._pos, until_pos):
-            items = self._get_data()
-            if not items:
+            if items := self._get_data():
+                self._pages.append(items)
+            else:
                 break
-            self._pages.append(items)
 
     def _load_page_from_pos(self, for_pos):
         try:
@@ -152,9 +152,7 @@ class Paginator:
         
         If not exist it will add page until given pos.
         """
-        success = self._load_page_from_pos(for_pos)
-        
-        if success:
+        if success := self._load_page_from_pos(for_pos):
             return True
 
         # Add page if pages for given pos is empty
@@ -174,9 +172,7 @@ class Paginator:
         # Retrieving page
         items = self._pages[pos]
         start_item_pos = pos * self.limit
-        result = [
-            (pos, item) for pos, item in enumerate(items, start=start_item_pos + 1)
-        ]
+        result = list(enumerate(items, start=start_item_pos + 1))
 
         self._pos += 1
 
@@ -190,9 +186,7 @@ class Paginator:
 
         items = self._pages[pos]
         start_item_pos = pos * self.limit
-        result = [
-            (pos, item) for pos, item in enumerate(items, start=start_item_pos + 1)
-        ]
+        result = list(enumerate(items, start=start_item_pos + 1))
 
         self._pos -= 1
 
@@ -210,11 +204,7 @@ def dynamic_bars(length):
     if isinstance(length, str):
         length = len(length)
 
-    bar = ""
-    for _ in range(length):
-        bar += "="
-    
-    return bar
+    return "".join("=" for _ in range(length))
 
 def get_key_value(text, sep='='):
     splitted = text.split(sep, maxsplit=1)

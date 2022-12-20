@@ -55,15 +55,7 @@ def _check_args(opts, args):
     
     Used in :class:`InputHandler`
     """
-    for opt in opts:
-        if opt not in args:
-            continue
-        else:
-            # original or alias options is exist in args
-            return True
-    
-    # not exist
-    return False
+    return any(opt in args for opt in opts)
 
 def validate_group_url(url):
     try:
@@ -198,7 +190,7 @@ class InputHandler(argparse.Action):
                 argv = sys_argv[pos]
             except IndexError:
                 break
-            
+
             if argv.startswith('-'):
                 # Try to find value option
                 try:
@@ -209,11 +201,9 @@ class InputHandler(argparse.Action):
                     if not next_arg.startswith('-') and argv not in _store_true_args:
                         # We assume this as value of another option
                         pos += 1
-                        pass
-                
                 pos += 1
                 continue
-            
+
             pos_arg = True
             pos_value = argv
             break
@@ -232,18 +222,15 @@ class InputHandler(argparse.Action):
         self.empty_search = not pos_arg and self.search
         if self.empty_search:
             sys_argv.append("dummy_empty_search")
-        
+
         self.pipe = pipe
         self.pipe_value = pipe_value
 
     def __call__(self, parser, namespace, values, option_string=None):
         urls = self.pipe_value if self.pipe else values
 
-        file_exist = False
         file_path = Path(urls)
-        if file_path.exists() and file_path.is_file():
-            file_exist = True
-
+        file_exist = bool(file_path.exists() and file_path.is_file())
         fetch_library_manga = urls.startswith('library')
         fetch_library_list = urls.startswith('list')
         fetch_library_follows_list = urls.startswith('followed-list')
@@ -273,7 +260,7 @@ class InputHandler(argparse.Action):
 
         if fetch_library_manga:
             result = urls.split(':')
-            
+
             # Try to get filter status
             try:
                 status = result[1]
@@ -281,15 +268,12 @@ class InputHandler(argparse.Action):
                 status = None
             else:
                 status = status.strip()
-            
+
             if status == 'help':
                 text = "List of statuses filter for user library manga"
 
                 # Build dynamic bar
-                bars = ""
-                for _ in text:
-                    bars += "="
-
+                bars = "".join("=" for _ in text)
                 print(bars)
                 print(text)
                 print(bars)

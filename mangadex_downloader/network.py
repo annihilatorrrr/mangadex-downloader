@@ -75,7 +75,7 @@ uploads_url = 'https://uploads.mangadex.org'
 # (scheme, netloc, and path only)
 def _get_netloc(url):
     result = urllib.parse.urlparse(url)
-    return result.scheme + '://' + result.netloc + result.path
+    return f'{result.scheme}://{result.netloc}{result.path}'
 
 class ModifiedSession(requests.Session):
     """Modified requests session with ability to set timeout for each requests"""
@@ -88,7 +88,7 @@ class ModifiedSession(requests.Session):
         self._timeout = time
 
     def send(self, r, **kwargs):
-        kwargs.update({'timeout': self._timeout})
+        kwargs['timeout'] = self._timeout
         return super().send(r, **kwargs)
 
 class requestsMangaDexSession(ModifiedSession):
@@ -111,8 +111,11 @@ class requestsMangaDexSession(ModifiedSession):
         self.user = None
         self.delay = None
         self.config = config
-        user_agent = 'mangadex-downloader {0} (https://github.com/mansuf/mangadex-downloader) '.format(__version__)
-        user_agent += 'Python/{0[0]}.{0[1]} '.format(sys.version_info)
+        user_agent = 'mangadex-downloader {0} (https://github.com/mansuf/mangadex-downloader) '.format(
+            __version__
+        ) + 'Python/{0[0]}.{0[1]} '.format(
+            sys.version_info
+        )
         user_agent += 'requests/{0}'.format(
             requests.__version__
         )
@@ -137,18 +140,19 @@ class requestsMangaDexSession(ModifiedSession):
     def login_from_cache(self):
         if self.check_login():
             raise AlreadyLoggedIn("User already logged in")
-        
+
         session_token = self._login_cache.get_session_token()
         refresh_token = self._login_cache.get_refresh_token()
 
-        if session_token and refresh_token is None:
+        if (
+            session_token
+            and refresh_token is None
+            or session_token is None
+            and refresh_token is None
+        ):
             # We assume this as invalid
             # Because we can login to MangaDex with session token
             # But, we cannot renew the session because refresh token is missing
-            return
-
-        elif session_token is None and refresh_token is None:
-            # No cached token
             return
 
         log.info("Logging in to MangaDex from cache")
@@ -186,10 +190,9 @@ class requestsMangaDexSession(ModifiedSession):
             ))
             return None
         except requests.exceptions.ReadTimeout as e:
-            log.error("Failed connect to '%s', reason: Connection timed out. Trying... (attempt: %s)" % (
-                _get_netloc(e.request.url),
-                attempt
-            ))
+            log.error(
+                f"Failed connect to '{_get_netloc(e.request.url)}', reason: Connection timed out. Trying... (attempt: {attempt})"
+            )
             return None
 
         # We are being rate limited
@@ -199,7 +202,7 @@ class requestsMangaDexSession(ModifiedSession):
             # Retry-After is from DDoS-Guard
             if resp.headers.get('x-ratelimit-retry-after'):
                 delay = float(resp.headers.get('x-ratelimit-retry-after')) - time.time()
-            
+
             elif resp.headers.get('Retry-After'):
                 delay = float(resp.headers.get('Retry-After'))
             else:
@@ -222,8 +225,8 @@ class requestsMangaDexSession(ModifiedSession):
 
             log.info(
                 f"Failed to connect to \"{url}\", " \
-                f"reason: Server throwing error code {resp.status_code}. "  \
-                f"Trying... (attempt: {attempt})"
+                    f"reason: Server throwing error code {resp.status_code}. "  \
+                    f"Trying... (attempt: {attempt})"
             )
             return None
 
@@ -235,11 +238,7 @@ class requestsMangaDexSession(ModifiedSession):
         resp = None
         retries = self.config.http_retries
 
-        if isinstance(retries, int):
-            iterator = range(retries)
-        else:
-            iterator = itertools.count()
-
+        iterator = range(retries) if isinstance(retries, int) else itertools.count()
         for _ in iterator:
             resp = self._request(attempt, *args, **kwargs)
 
@@ -265,7 +264,7 @@ class requestsMangaDexSession(ModifiedSession):
         if resp is not None and resp.status_code >= 500:
             # 5 attempts request failed caused by server error
             # raise error
-            raise HTTPException('Server sending %s code' % resp.status_code, resp=resp)
+            raise HTTPException(f'Server sending {resp.status_code} code', resp=resp)
 
         raise UnhandledHTTPError("Unhandled HTTP error")
 
@@ -275,7 +274,7 @@ class requestsMangaDexSession(ModifiedSession):
 
         self._refresh_token = refresh_token
         self._session_token = session_token
-        self.headers['Authorization'] = 'Bearer %s' % session_token
+        self.headers['Authorization'] = f'Bearer {session_token}'
 
         self._login_cache.set_refresh_token(refresh_token)
         self._login_cache.set_session_token(session_token)
@@ -322,13 +321,15 @@ class requestsMangaDexSession(ModifiedSession):
         """Refresh login session with refresh token"""
         if self._refresh_token is None:
             raise RuntimeError("User are not logged in")
-        
+
         url = '{0}/auth/refresh'.format(base_url)
         r = self.post(url, json={"token": self._refresh_token})
         result = r.json()
 
         if r.status_code != 200:
-            raise LoginFailed("Refresh token failed, reason: %s" % result["errors"][0]["detail"])
+            raise LoginFailed(
+                f'Refresh token failed, reason: {result["errors"][0]["detail"]}'
+            )
 
         self._update_token(result)
 
@@ -350,11 +351,11 @@ class requestsMangaDexSession(ModifiedSession):
 
         # Type checking
         if not isinstance(password, str):
-            raise ValueError("password must be str, not %s" % type(password))
+            raise ValueError(f"password must be str, not {type(password)}")
         if username and not isinstance(username, str):
-            raise ValueError("username must be str, not %s" % type(username))
+            raise ValueError(f"username must be str, not {type(username)}")
         if email and not isinstance(email, str):
-            raise ValueError("email must be str, not %s" % type(email))
+            raise ValueError(f"email must be str, not {type(email)}")
 
         if not username and not email:
             raise LoginFailed("at least provide \"username\" or \"email\" to login")
@@ -367,20 +368,20 @@ class requestsMangaDexSession(ModifiedSession):
 
         url = '{0}/auth/login'.format(base_url)
         data = {"password": password}
-        
+
         if username:
             data['username'] = username
         if email:
             data['email'] = email
-        
+
         # Begin to log in
         r = self.post(url, json=data)
         if r.status_code == 401:
             result = r.json()
             err = result["errors"][0]["detail"]
-            log.error("Login to MangaDex failed, reason: %s" % err)
+            log.error(f"Login to MangaDex failed, reason: {err}")
             raise LoginFailed(err)
-        
+
         result = r.json()
         self._update_token(result)
 
@@ -421,13 +422,13 @@ class requestsMangaDexSession(ModifiedSession):
         log.info("Logged out from MangaDex")
 
     def _report(self, data):
-        log.debug('Reporting %s to MangaDex network' % data)
+        log.debug(f'Reporting {data} to MangaDex network')
         r = self.post('https://api.mangadex.network/report', json=data)
 
         if r.status_code != 200:
-            log.debug('Failed to report %s to MangaDex network' % data)
+            log.debug(f'Failed to report {data} to MangaDex network')
         else:
-            log.debug('Successfully send report %s to MangaDex network' % data)
+            log.debug(f'Successfully send report {data} to MangaDex network')
 
     def report(self, data):
         """Report to MangaDex network"""

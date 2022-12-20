@@ -110,7 +110,7 @@ class IteratorManga(MangaIterator):
             'limit': self.limit,
             'offset': self.offset,
         }
-        params.update(self._param_init.copy())
+        params |= self._param_init.copy()
 
         return params
 
@@ -152,16 +152,13 @@ class IteratorUserLibraryManga(MangaIterator):
 
         self.status = status
 
-        lib = {}
-        for stat in self.statuses:
-            lib[stat] = []
+        lib = {stat: [] for stat in self.statuses}
         self.library = lib
 
-        logged_in = Net.mangadex.check_login()
-        if not logged_in:
+        if logged_in := Net.mangadex.check_login():
+            self._parse_reading_status()
+        else:
             raise NotLoggedIn("Retrieving user library require login")
-
-        self._parse_reading_status()
 
     def _parse_reading_status(self):
         r = Net.mangadex.get(f'{base_url}/manga/status')
@@ -171,11 +168,7 @@ class IteratorUserLibraryManga(MangaIterator):
             self.library[status].append(manga_id)
 
     def _check_status(self, manga):
-        if self.status is None:
-            return True
-
-        manga_ids = self.library[self.status]
-        return manga.id in manga_ids
+        return True if self.status is None else manga.id in self.library[self.status]
 
     def next(self) -> Manga:
         while True:
@@ -227,13 +220,9 @@ class IteratorMangaFromList(MangaIterator):
         self._parse_list()
 
     def _parse_list(self):
-        if self.id:
-            data = get_list(self.id)['data']
-        else:
-            data = self.data
-
+        data = get_list(self.id)['data'] if self.id else self.data
         self.name = data['attributes']['name']
-        
+
         for rel in data['relationships']:
             _type = rel['type']
             _id = rel['id']
@@ -243,7 +232,11 @@ class IteratorMangaFromList(MangaIterator):
                 self.user = User(_id)
     
     def fill_data(self):
-        ids = self.manga_ids
+        if not (ids := self.manga_ids):
+            return
+        limit = self.limit
+        param_ids = ids[:limit]
+        del ids[:len(param_ids)]
         includes = ['author', 'artist', 'cover_art']
         content_ratings = [
             'safe',
@@ -252,33 +245,29 @@ class IteratorMangaFromList(MangaIterator):
             'pornographic' # Filter porn content will be done in next()
         ]
 
-        limit = self.limit
-        if ids:
-            param_ids = ids[:limit]
-            del ids[:len(param_ids)]
-            params = {
-                'includes[]': includes,
-                'limit': limit,
-                'contentRating[]': content_ratings,
-                'ids[]': param_ids
-            }
-            url = f'{base_url}/manga'
-            r = Net.mangadex.get(url, params=params)
-            data = r.json()
+        params = {
+            'includes[]': includes,
+            'limit': limit,
+            'contentRating[]': content_ratings,
+            'ids[]': param_ids
+        }
+        url = f'{base_url}/manga'
+        r = Net.mangadex.get(url, params=params)
+        data = r.json()
 
-            notexist_ids = param_ids.copy()
-            copy_data = data.copy()
-            for manga_data in copy_data['data']:
-                manga = Manga(data=manga_data)
-                if manga.id in notexist_ids:
-                    notexist_ids.remove(manga.id)
-            
-            if notexist_ids:
-                for manga_id in notexist_ids:
-                    log.warning(f'There is ghost (not exist) manga = {manga_id} in list {self.name}')
+        notexist_ids = param_ids.copy()
+        copy_data = data.copy()
+        for manga_data in copy_data['data']:
+            manga = Manga(data=manga_data)
+            if manga.id in notexist_ids:
+                notexist_ids.remove(manga.id)
 
-            for manga_data in data['data']:
-                self.queue.put(Manga(data=manga_data))
+        if notexist_ids:
+            for manga_id in notexist_ids:
+                log.warning(f'There is ghost (not exist) manga = {manga_id} in list {self.name}')
+
+        for manga_data in data['data']:
+            self.queue.put(Manga(data=manga_data))
 
 class IteratorUserLibraryList(BaseIterator):
     def __init__(self):
@@ -386,12 +375,12 @@ class IteratorSeasonalManga(IteratorMangaFromList):
         super().__init__(mdlist.id)
 
     @classmethod
-    def _get_seasons(self):
+    def _get_seasons(cls):
         seasons = {}
-        for mdlist in IteratorUserList(self.owner_list):
+        for mdlist in IteratorUserList(cls.owner_list):
             name = mdlist.name.lower().replace('seasonal: ', '')
             seasons[name] = mdlist
-        
+
         return seasons
 
 def iter_random_manga(**filters):

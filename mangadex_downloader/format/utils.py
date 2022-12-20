@@ -62,10 +62,7 @@ class NumberWithLeadingZeros:
                 raise ValueError("total must be iterable or int") from None
             total_num = total
         else:
-            total_num = 0
-            for _ in iter_total:
-                total_num += 1
-
+            total_num = sum(1 for _ in iter_total)
         self._total = total_num
         self._num = 0
 
@@ -117,9 +114,9 @@ def verify_sha256(server_file, path=None, data=None):
             f'Failed to grab sha256 hash from server_file = {server_file}. ' \
             f'Please report it to {__repository__}/issues'
         )
-    
-    server_hash = match.group('hash')
-    
+
+    server_hash = match['hash']
+
     local_sha256 = hashlib.sha256()
 
     if path:
@@ -131,14 +128,14 @@ def verify_sha256(server_file, path=None, data=None):
         size = 8192
         with open(path, 'rb') as reader:
             while True:
-                data = reader.read(size)
-                if not data:
+                if data := reader.read(size):
+                    local_sha256.update(data)
+                else:
                     break
 
-                local_sha256.update(data)
     elif data:
         local_sha256.update(data)
-    
+
     return local_sha256.hexdigest() == server_hash
 
 # Compliance with Tachiyomi local JSON format
@@ -153,40 +150,32 @@ def write_tachiyomi_details(manga, path):
     
     See https://tachiyomi.org/help/guides/local-manga/#editing-local-manga-details
     """
-    data = {}
-    data['title'] = manga.title
-
     # Parse authors
-    authors = ""
-    for index, author in enumerate(manga.authors):
-        if index < (len(manga.authors) - 1):
-            authors += author + ","
-        else:
-            # If this is last index, append author without comma
-            authors += author
-    data['author'] = authors
-
+    authors = "".join(
+        f"{author}," if index < (len(manga.authors) - 1) else author
+        for index, author in enumerate(manga.authors)
+    )
     # Parse artists
-    artists = ""
-    for index, artist in enumerate(manga.artists):
-        if index < (len(manga.artists) - 1):
-            artists += artist + ","
-        else:
-            # If this is last index, append artist without comma
-            artists += artist
-    data['artist'] = artists
-
-    data['description'] = manga.description
-    data['genre'] = manga.genres
-    data['status'] = MangaStatus[manga.status].value
-    data['_status values'] = [
-        "0 = Unknown",
-        "1 = Ongoing",
-        "2 = Completed",
-        "3 = Licensed",
-        "4 = Publishing finished",
-        "5 = Cancelled",
-        "6 = On hiatus"
-    ]
+    artists = "".join(
+        f"{artist}," if index < (len(manga.artists) - 1) else artist
+        for index, artist in enumerate(manga.artists)
+    )
+    data = {
+        'title': manga.title,
+        'author': authors,
+        'artist': artists,
+        'description': manga.description,
+        'genre': manga.genres,
+        'status': MangaStatus[manga.status].value,
+        '_status values': [
+            "0 = Unknown",
+            "1 = Ongoing",
+            "2 = Completed",
+            "3 = Licensed",
+            "4 = Publishing finished",
+            "5 = Cancelled",
+            "6 = On hiatus",
+        ],
+    }
     with open(path, 'w') as writer:
         writer.write(json.dumps(data))

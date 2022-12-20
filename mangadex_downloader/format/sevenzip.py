@@ -82,7 +82,7 @@ class SevenZip(BaseFormat):
             count = NumberWithLeadingZeros(0)
             chap_name = chap_class.get_simplified_name()
 
-            chapter_zip_path = self.path / (chap_name + '.cb7')
+            chapter_zip_path = self.path / f'{chap_name}.cb7'
             if chapter_zip_path.exists():
                 if self.replace:
                     delete_file(chapter_zip_path)
@@ -96,7 +96,7 @@ class SevenZip(BaseFormat):
 
             log.info(f"{chap_name} has finished download, converting to cb7...")
             worker.submit(lambda: self.convert(images, chapter_zip_path))
-            
+
             # Remove original chapter folder
             shutil.rmtree(chapter_path, ignore_errors=True)
 
@@ -150,7 +150,7 @@ class SevenZipVolume(SevenZip):
             else:
                 volume = 'No Volume'
 
-            volume_zip_path = self.path / (volume + '.cb7')
+            volume_zip_path = self.path / f'{volume}.cb7'
             if volume_zip_path.exists():
                 if self.replace:
                     delete_file(volume_zip_path)
@@ -163,7 +163,7 @@ class SevenZipVolume(SevenZip):
 
             for chap_class, chap_images in chapters:
                 # Insert "start of the chapter" image
-                img_name = count.get() + '.png'
+                img_name = f'{count.get()}.png'
 
                 # Make sure we never duplicated it
                 write_start_image = self.check_write_chapter_info(volume_zip_path, img_name)
@@ -179,11 +179,11 @@ class SevenZipVolume(SevenZip):
                 count.increase()
 
                 images.extend(self.get_images(chap_class, chap_images, volume_path, count))
-            
+
             # Begin converting
             log.info(f"{volume} has finished download, converting to cb7...")
             worker.submit(lambda: self.convert(images, volume_zip_path))
-                
+
             # Remove original chapter folder
             shutil.rmtree(volume_path, ignore_errors=True)
 
@@ -202,11 +202,11 @@ class SevenZipSingle(SevenZipVolume):
             # there is nothing we can download
             worker.shutdown()
             return
-        
+
         cache, total, merged_name = result_cache
 
         count = NumberWithLeadingZeros(total)
-        manga_zip_path = self.path / (merged_name + '.cb7')
+        manga_zip_path = self.path / f'{merged_name}.cb7'
 
         if manga_zip_path.exists():
             if self.replace:
@@ -219,7 +219,7 @@ class SevenZipSingle(SevenZipVolume):
 
         for chap_class, chap_images in cache:
             # Insert "start of the chapter" image
-            img_name = count.get() + '.png'
+            img_name = f'{count.get()}.png'
 
             # Make sure we never duplicated it
             write_start_image = self.check_write_chapter_info(manga_zip_path, img_name)
@@ -235,7 +235,7 @@ class SevenZipSingle(SevenZipVolume):
             count.increase()
 
             images.extend(self.get_images(chap_class, chap_images, path, count))
-        
+
         # Begin converting
         log.info(f"Manga '{manga.title}' has finished download, converting to cb7...")
         self.convert(images, manga_zip_path)

@@ -16,7 +16,7 @@ def get_version():
     if _version is None:
         raise RuntimeError("Version is not set")
 
-    return _version.group(1)
+    return _version[1]
 
 def get_value_var(var_name):
     """Get value of `__{var_name}__` from `mangadex_downloader/__init__.py`"""
@@ -27,8 +27,8 @@ def get_value_var(var_name):
 
     if found is None:
         raise RuntimeError(f'{var} is not set in "mangadex_downloader/__init__.py"')
-    
-    return found.group(1)
+
+    return found[1]
 
 def get_requirements():
     """Return tuple of library needed for app to run"""

@@ -81,11 +81,11 @@ class RawVolume(BaseFormat):
                     volume = f'Vol. {chap_class.volume}'
                 else:
                     volume = 'No Volume'
-                
+
                 volume_path = create_directory(volume, base_path)
 
                 # Insert "start of the chapter" image
-                img_name = count.get() + '.png'
+                img_name = f'{count.get()}.png'
                 img_path = volume_path / img_name
 
                 if not self.no_chapter_info:
@@ -105,7 +105,7 @@ class RawSingle(BaseFormat):
             # The chapters is empty
             # there is nothing we can download
             return
-        
+
         cache, total, merged_name = result_cache
 
         count = NumberWithLeadingZeros(total)
@@ -114,7 +114,7 @@ class RawSingle(BaseFormat):
 
         for chap_class, images in cache:
             # Insert "start of the chapter" image
-            img_name = count.get() + '.png'
+            img_name = f'{count.get()}.png'
             img_path = path / img_name
 
             if not self.no_chapter_info:

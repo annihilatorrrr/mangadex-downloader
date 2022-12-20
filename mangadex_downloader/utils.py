@@ -42,7 +42,7 @@ def validate_url(url):
     match = re_url.search(url)
     if match is None:
         raise InvalidURL('\"%s\" is not valid MangaDex URL' % url)
-    return match.group(1)
+    return match[1]
 
 def validate_legacy_url(url):
     """Validate old mangadex url and return the id"""
@@ -50,17 +50,14 @@ def validate_legacy_url(url):
     match = re_url.search(url)
     if match is None:
         raise InvalidURL('\"%s\" is not valid MangaDex URL' % url)
-    return match.group('id')
+    return match['id']
 
 def validate_group_url(url):
     """Validate group mangadex url and return the id"""
     if url is None:
         return
     all_group = url.lower().strip() == "all"
-    if not all_group:
-        return validate_url(url)
-    else:
-        return "all"
+    return "all" if all_group else validate_url(url)
 
 def create_directory(name, path=None):
     """Create directory with ability to sanitize name to prevent error"""
@@ -111,11 +108,11 @@ def comma_separated_text(array):
 
     # Add the rest of items
     for item in array:
-        text += ', ' + item
+        text += f', {item}'
 
     # Closing square bracket
     text += ']'
-    
+
     return text
 
 def delete_file(file):
@@ -191,10 +188,9 @@ class QueueWorker(threading.Thread):
         if not blocking:
             return fut
 
-        err = fut.exception()
-        if err:
+        if err := fut.exception():
             raise err
-        
+
         return fut.result()
 
     def shutdown(self):
@@ -236,14 +232,11 @@ def convert_int_or_float(value):
 def check_blacklisted_tags_manga(manga):
     from .config import env
 
-    found_tags = []
-    for manga_tag, blacklisted_tag_id in itertools.product(manga.tags, env.tags_blacklist):
-        if manga_tag.id != blacklisted_tag_id:
-            continue
-
-        found_tags.append(manga_tag)
-
-    if found_tags:
-        return True, found_tags
-    else:
-        return False, found_tags
+    found_tags = [
+        manga_tag
+        for manga_tag, blacklisted_tag_id in itertools.product(
+            manga.tags, env.tags_blacklist
+        )
+        if manga_tag.id == blacklisted_tag_id
+    ]
+    return (True, found_tags) if found_tags else (False, found_tags)

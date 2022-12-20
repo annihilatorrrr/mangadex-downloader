@@ -53,34 +53,33 @@ _doh_providers.extend(get_all_dns_provider())
 
 # Utilities
 def _validate_bool(val):
-    if isinstance(val, str):
-        value = val.strip().lower()
-
-        # Is it 1 or 0 ?
-        try:
-            return bool(int(value))
-        except ValueError:
-            pass
-
-        # This is dumb
-        if value == "true":
-            return True
-        elif value == "false":
-            return False
-        else:
-            raise ConfigTypeError(f"'{val}' is not valid boolean value")
-    else:
+    if not isinstance(val, str):
         return bool(val)
+    value = val.strip().lower()
+
+    # Is it 1 or 0 ?
+    try:
+        return bool(int(value))
+    except ValueError:
+        pass
+
+    # This is dumb
+    if value == "true":
+        return True
+    elif value == "false":
+        return False
+    else:
+        raise ConfigTypeError(f"'{val}' is not valid boolean value")
 
 def _validate_language(val):
     lang = get_language(val)
     return lang.value
 
 def _validate_value_from_iterator(val, iterator):
-    values = [i for i in iterator]
+    values = list(iterator)
     if val not in values:
         raise ConfigTypeError(f"'{val}' is not valid value, available values are {values}")
-    
+
     return val
 
 def _validate_format(val):
@@ -444,7 +443,7 @@ class _Config:
             # useful for passing default arguments in argparse
             if self._data is None:
                 self._write_default()
-            
+
             return
 
         with self._lock:
@@ -462,8 +461,7 @@ class _Config:
                 except json.JSONDecodeError as e:
                     err = e
                     log.error(
-                        f'Failed to decode json data from config file = {self.path.resolve()} ' \
-                        f'reason: {e}, retrying... (attempt: {attempt})'
+                        f'Failed to decode json data from config file = {self.path.resolve()} reason: {err}, retrying... (attempt: {attempt})'
                     )
                     # If somehow failed to decode JSON data, delete it and try it again
                     self.path.unlink(missing_ok=True)
@@ -471,8 +469,7 @@ class _Config:
                 except Exception as e:
                     err = e
                     log.error(
-                        f'Failed to load json data from config file = {self.path.resolve()} ' \
-                        f'reason: {e}, retrying... (attempt: {attempt})'
+                        f'Failed to load json data from config file = {self.path.resolve()} reason: {err}, retrying... (attempt: {attempt})'
                     )
                 else:
                     success = True
@@ -481,7 +478,7 @@ class _Config:
             if not success:
                 raise MangaDexException(
                     f"Failed to load config file = {self.path}, " \
-                    f"reason: {err}. Make sure you have permission to write & read in that directory"
+                        f"reason: {err}. Make sure you have permission to write & read in that directory"
                 )
 
             # Write new config
@@ -554,7 +551,7 @@ class ConfigProxy:
         except Exception as e:
             # Provide more details about error
             # Which config triggered this
-            err = f"{name}: " + str(e)
+            err = f"{name}: {str(e)}"
             raise ConfigTypeError(err) from None
 
         _conf.write(name, val)
@@ -660,24 +657,24 @@ class AuthCacheManager:
                 # Failed to decode base64
                 log.error(
                     f"Failed to decode auth cache file, reason: {e}. " \
-                    "Authentication cache file will be re-created and previous auth cached will be lost. " \
-                    f"Recreating... (attempt: {attempt})"
+                        "Authentication cache file will be re-created and previous auth cached will be lost. " \
+                        f"Recreating... (attempt: {attempt})"
                 )
             except json.JSONDecodeError as e:
                 err = e
                 # Failed to deserialize json
                 log.error(
                     f"Failed to deserialize json auth cache file, reason: {e}. " \
-                    "Authentication cache file will be re-created and previous auth cached will be lost. " \
-                    f"Recreating... (attempt: {attempt})"
+                        "Authentication cache file will be re-created and previous auth cached will be lost. " \
+                        f"Recreating... (attempt: {attempt})"
                 )
             except Exception as e:
                 err = e
                 # another error
                 log.warning(
                     f"Failed to load auth cache file, reason: {e}. " \
-                    "Authentication cache file will be re-created and previous auth cached will be lost. " \
-                    f"Recreating... (attempt: {attempt})"
+                        "Authentication cache file will be re-created and previous auth cached will be lost. " \
+                        f"Recreating... (attempt: {attempt})"
                 )
             else:
                 success = True
@@ -689,12 +686,10 @@ class AuthCacheManager:
                     self.path.unlink(missing_ok=True)
                 except Exception as e:
                     log.debug(f"Failed to delete auth cache file, reason: {e}")
-                    pass
-
         if not success:
             exc = MangaDexException(
                 f"Failed to load auth cache file ({self.path}), reason: {err}" \
-                f"Make sure you have permission to read & write in that directory"
+                    f"Make sure you have permission to read & write in that directory"
             )
             print("Traceback of last error when loading auth cache file", file=sys.stderr)
             traceback.print_exception(type(err), err, err.__traceback__, file=sys.stderr)
@@ -744,7 +739,7 @@ class AuthCacheManager:
                 # exp_time must have at least above 30 seconds (30 seconds for re-login)
                 exp_time = (exp - now).total_seconds()
 
-                if (exp_time - 30) <= 0:
+                if exp_time <= 30:
                     # The expiration time is less than 30 seconds
                     # Mark is as expired
                     self._reset_session_token()
@@ -789,10 +784,9 @@ class AuthCacheManager:
 
             if exp > now:
                 return token
-            else:
-                # Token is expired
-                self._reset_refresh_token()
-                return None
+            # Token is expired
+            self._reset_refresh_token()
+            return None
 
     def set_refresh_token(self, token):
         """Write refresh token to cache file
